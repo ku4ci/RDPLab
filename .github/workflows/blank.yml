@@ -1,5 +1,4 @@
-name: 🚀 RDP PERFORMANCE TEST
-
+name: 🚀 RDP Lab
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +23,7 @@ jobs:
         run: |
           Write-Host ""
           Write-Host ""
-          Write-Host "🤖 RDP SERVER UNTUK PERFORMANCE TEST" -ForegroundColor Yellow
+          Write-Host "🤖 RDP SERVER UNTUK LAB" -ForegroundColor Yellow
           Write-Host "⚡ Berjalan di GitHub Actions" -ForegroundColor Green
           Write-Host "🕒 Durasi: ${{ github.event.inputs.duration }}" -ForegroundColor Magenta
           Write-Host ""
@@ -128,7 +127,7 @@ jobs:
           
           # Buat user baru dengan hak yang diperlukan
           try {
-              New-LocalUser -Name "RDP-USER" -Password $securePass -AccountNeverExpires -Description "RDP Performance Test Account"
+              New-LocalUser -Name "RDP-USER" -Password $securePass -AccountNeverExpires -Description "RDP Lab Account"
               Write-Host "│ ✅ User baru dibuat" -ForegroundColor Green
               
               # Set password tidak pernah expired
@@ -292,7 +291,7 @@ jobs:
           Write-Host "│   1. Buka Remote Desktop Connection           │" -ForegroundColor Yellow
           Write-Host "│   2. Masukkan alamat: $env:TAILSCALE_IP       │" -ForegroundColor Yellow
           Write-Host "│   3. User: RDP-USER | Password: di atas       │" -ForegroundColor Yellow
-          Write-Host "│   4. Gunakan untuk performance test 🚀        │" -ForegroundColor Yellow
+          Write-Host "│   4. Gunakan untuk RDP Lab 🚀                │" -ForegroundColor Yellow
           Write-Host "└───────────────────────────────────────────┘" -ForegroundColor Cyan
           
           # Simpan total menit ke env
