@@ -53,7 +53,7 @@ jobs:
                   Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
                   Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
               }},
-              @{Name="Membuka port 3389 pada Windows Firewall"; Script={
+              @{Name="Membuka port 3389 di Windows Firewall"; Script={
                   netsh advfirewall firewall add rule name="RDP-Lab" dir=in action=allow protocol=TCP localport=3389 profile=any
                   netsh advfirewall firewall add rule name="RDP-Lab-Out" dir=out action=allow protocol=TCP localport=3389 profile=any
               }},
@@ -87,9 +87,9 @@ jobs:
           # Fungsi untuk membuat password 8 karakter dengan minimal 1 huruf besar, 1 huruf kecil, 1 angka
           function New-LabPassword {
               param()
-              $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'   # hilangkan I,O biar tidak mudah tertukar
+              $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'   # hilangkan I,O biar ga gampang ketukar
               $lower = 'abcdefghijkmnpqrstuvwxyz'
-              $numbers = '23456789'                 # hilangkan 0,1 biar tidak tertukar
+              $numbers = '23456789'               # hilangkan 0,1 biar ga ketukar
               $all = $upper + $lower + $numbers
 
               # wajib 1 huruf besar, 1 huruf kecil, 1 angka
@@ -98,7 +98,7 @@ jobs:
               $pw += $lower[(Get-Random -Minimum 0 -Maximum $lower.Length)]
               $pw += $numbers[(Get-Random -Minimum 0 -Maximum $numbers.Length)]
 
-              # tambahkan karakter acak hingga 8 karakter
+              # tambahin karakter random sampai 8
               for ($i = 1; $i -le 5; $i++) {
                   $pw += $all[(Get-Random -Minimum 0 -Maximum $all.Length)]
               }
@@ -107,7 +107,7 @@ jobs:
               return -join ($pw.ToCharArray() | Sort-Object { Get-Random })
           }
 
-          # Gunakan password custom dari env jika tersedia
+          # Kalau ada password custom dari env, pakai itu
           if ($env:CUSTOM_RDP_PASS) {
               $password = $env:CUSTOM_RDP_PASS
               Write-Host "│ ℹ️  Menggunakan password kustom dari environment variable" -ForegroundColor Blue
@@ -117,7 +117,7 @@ jobs:
 
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
           
-          # Hapus user lama jika ada
+          # Hapus user lama kalau ada
           try {
               Remove-LocalUser -Name "RDP-USER" -ErrorAction SilentlyContinue
               Write-Host "│ ✅ User lama dihapus (jika ada)" -ForegroundColor Green
@@ -130,19 +130,19 @@ jobs:
               New-LocalUser -Name "RDP-USER" -Password $securePass -AccountNeverExpires -Description "Akun RDP Lab"
               Write-Host "│ ✅ Akun user baru berhasil dibuat" -ForegroundColor Green
               
-              # Set password agar tidak pernah kedaluwarsa
+              # Set password tidak pernah expired
               try {
                   Set-LocalUser -Name "RDP-USER" -PasswordNeverExpires $true -ErrorAction SilentlyContinue
               } catch {
-                  # Abaikan jika cmdlet tidak tersedia
+                  # abaikan kalau cmdlet tidak tersedia
               }
 
-              # Tambahkan user ke grup yang diperlukan
+              # Tambah ke grup yang perlu
               Add-LocalGroupMember -Group "Administrators" -Member "RDP-USER" -ErrorAction SilentlyContinue
               Add-LocalGroupMember -Group "Remote Desktop Users" -Member "RDP-USER" -ErrorAction SilentlyContinue
               Add-LocalGroupMember -Group "Users" -Member "RDP-USER" -ErrorAction SilentlyContinue
               
-              # Aktifkan user
+              # Enable user
               Enable-LocalUser -Name "RDP-USER"
               
               Write-Host "│ ✅ Hak Administrator & Remote Desktop telah diberikan" -ForegroundColor Green
@@ -152,7 +152,7 @@ jobs:
               exit 1
           }
           
-          # Simpan informasi ke environment (hindari mengekspos langsung di repo publik)
+          # Simpan info ke environment (hindari mengekspos langsung di repo publik)
           echo "RDP_USER=RDP-USER" >> $env:GITHUB_ENV
           echo "RDP_PASS=$password" >> $env:GITHUB_ENV
           echo "$password" > $env:TEMP\rdp_password.txt
@@ -191,7 +191,7 @@ jobs:
               Write-Host "│ ❌ Tidak terdaftar dalam grup Remote Desktop Users" -ForegroundColor Red
           }
           
-          # Cek layanan RDP
+          # Cek service RDP
           $termService = Get-Service -Name TermService -ErrorAction SilentlyContinue
           if ($termService.Status -eq 'Running') {
               Write-Host "│ ✅ Layanan TermService sedang berjalan" -ForegroundColor Green
@@ -220,7 +220,7 @@ jobs:
               Write-Host "│ ❌ Gagal menginstal Tailscale" -ForegroundColor Red
           }
           
-          # Tunggu service berjalan
+          # Tunggu service jalan
           Start-Sleep -Seconds 10
           
           # Login dan hubungkan ke Tailscale
@@ -297,7 +297,7 @@ jobs:
           # Simpan total menit ke env
           echo "TOTAL_MINUTES=$totalMinutes" >> $env:GITHUB_ENV
 
-      # JAGA SESSION TETAP HIDUP
+      # JAGA SESSION TETAP HIDUP SELAMA TEST
       - name: ⏳ MENJAGA SESI TETAP AKTIF
         run: |
           $password = Get-Content $env:TEMP\rdp_password.txt -ErrorAction SilentlyContinue
@@ -322,7 +322,7 @@ jobs:
               while ($true) {
                   $currentTime = Get-Date
                   
-                  # Log status setiap 2 menit
+                  # Log status tiap 2 menit
                   if (($currentTime - $lastLogTime).TotalMinutes -ge 2) {
                       $termService = Get-Service -Name TermService -ErrorAction SilentlyContinue
                       $rdpConnections = Get-NetTCPConnection -LocalPort 3389 -ErrorAction SilentlyContinue | Where-Object {$_.State -eq 'Established'}
@@ -368,4 +368,54 @@ jobs:
           } while ($sisaWaktu.TotalSeconds -gt 0)
           
           Write-Host ""
-          Write-Host "🎯
+          Write-Host "🎯 WAKTU HABIS - SESI LAB OTOMATIS DIHENTIKAN!" -ForegroundColor Red
+          
+          # Hentikan background job monitor
+          Get-Job -Name "SystemMonitor" -ErrorAction SilentlyContinue | Stop-Job -PassThru | Remove-Job -Force
+
+      # BERSIHKAN SESUDAH SELESAI
+      - name: 🧹 PEMBERSIHAN SISTEM
+        if: always()
+        run: |
+          Write-Host ""
+          Write-Host "🧹 SEDANG MEMBERSIHKAN SISTEM..." -ForegroundColor Yellow
+          
+          $cleanupSteps = @(
+              @{Name="Menghapus file password"; Script={
+                  Remove-Item "$env:TEMP\rdp_password.txt" -ErrorAction SilentlyContinue
+              }},
+              @{Name="Menonaktifkan user RDP Lab"; Script={
+                  Disable-LocalUser -Name "RDP-USER" -ErrorAction SilentlyContinue
+              }},
+              @{Name="Memutuskan jaringan Tailscale"; Script={
+                  & "$env:ProgramFiles\Tailscale\tailscale.exe" down --accept-risk=all -ErrorAction SilentlyContinue
+                  Start-Sleep -Seconds 5
+              }},
+              @{Name="Menghapus rule Firewall RDP"; Script={
+                  netsh advfirewall firewall delete rule name="RDP-Lab" dir=in -ErrorAction SilentlyContinue
+                  netsh advfirewall firewall delete rule name="RDP-Lab-Out" dir=out -ErrorAction SilentlyContinue
+                  Remove-NetFirewallRule -DisplayName "RDP-Lab" -ErrorAction SilentlyContinue
+                  Remove-NetFirewallRule -DisplayName "RDP-Lab-Out" -ErrorAction SilentlyContinue
+              }},
+              @{Name="Mengembalikan konfigurasi bawaan RDP"; Script={
+                  Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 1 -Force -ErrorAction SilentlyContinue
+                  Stop-Service -Name TermService -Force -ErrorAction SilentlyContinue
+              }}
+          )
+          
+          foreach($step in $cleanupSteps) {
+              Write-Host "│ 🗑️  $($step.Name)..." -NoNewline -ForegroundColor Gray
+              try {
+                  & $step.Script
+                  Write-Host "`r│ ✅ $($step.Name)" -ForegroundColor Green
+              } catch {
+                  Write-Host "`r│ ⚠️  $($step.Name) - Ditangani dengan aman" -ForegroundColor Yellow
+              }
+              Start-Sleep -Milliseconds 300
+          }
+          
+          # Bersihkan sisa job di background
+          Get-Job | Stop-Job -PassThru | Remove-Job -Force -ErrorAction SilentlyContinue
+          
+          Write-Host ""
+          Write-Host "🎉 Pembersihan sistem selesai! Sampai jumpa di Lab berikutnya! 👋" -ForegroundColor Green
