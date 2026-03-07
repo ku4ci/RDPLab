@@ -53,22 +53,6 @@ jobs:
           # Simpan password ke environment variable untuk ditampilkan nanti
           echo "RDP_PASS=$PASSWORD" >> $GITHUB_ENV
 
-      - name: 🚀 Persiapan OpenClaw (Node.js 22 & NPM Fix)
-        run: |
-          echo "Menghapus versi Node.js bawaan runner GitHub untuk mencegah konflik..."
-          sudo apt-get remove -y nodejs npm nodejs-doc libnode-dev || true
-          sudo apt-get autoremove -y
-          
-          echo "Menginstal Node.js 22 dari repositori NodeSource..."
-          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-          sudo apt-get install -y nodejs
-          
-          echo "Memperbaiki permission NPM untuk rdpuser agar tidak error EACCES saat install OpenClaw..."
-          sudo su - rdpuser -c "mkdir -p ~/.npm-global"
-          sudo su - rdpuser -c "npm config set prefix '~/.npm-global'"
-          sudo su - rdpuser -c "echo 'export PATH=\"~/.npm-global/bin:\$PATH\"' >> ~/.bashrc"
-          sudo su - rdpuser -c "echo 'export PATH=\"~/.npm-global/bin:\$PATH\"' >> ~/.xsessionrc"
-
       - name: 🌐 Konfigurasi Jaringan (Tailscale)
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
