@@ -39,8 +39,9 @@ jobs:
       - name: 👤 Membuat Akun RDP
         run: |
           echo "Membuat user baru untuk login..."
-          # Generate password acak 10 karakter
-          PASSWORD=$(openssl rand -base64 8)
+          
+          # Generate password yang gampang diketik: P@ssw0rd. + 3 angka random
+          PASSWORD="P@ssw0rd.$((RANDOM % 900 + 100))"
           
           # Buat user 'rdpuser' dengan hak akses sudo
           sudo useradd -m -s /bin/bash -G sudo rdpuser
