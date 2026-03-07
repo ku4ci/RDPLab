@@ -1,4 +1,4 @@
-name: 🚀 RDP Lab
+name: 🚀 Windows RDP Lab
 on:
   workflow_dispatch:
     inputs:
@@ -78,41 +78,20 @@ jobs:
           
           Write-Host "🎯 Konfigurasi selesai!" -ForegroundColor Green
 
-      # BUAT USER RDP GENERIC
+    # BUAT USER RDP GENERIC
       - name: 👤 MEMBUAT AKUN RDP
         run: |
           Write-Host ""
           Write-Host "👤 SEDANG MEMBUAT AKUN RDP" -ForegroundColor Yellow
           
-          # Fungsi untuk membuat password 8 karakter dengan minimal 1 huruf besar, 1 huruf kecil, 1 angka
-          function New-LabPassword {
-              param()
-              $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'   # hilangkan I,O biar ga gampang ketukar
-              $lower = 'abcdefghijkmnpqrstuvwxyz'
-              $numbers = '23456789'               # hilangkan 0,1 biar ga ketukar
-              $all = $upper + $lower + $numbers
-
-              # wajib 1 huruf besar, 1 huruf kecil, 1 angka
-              $pw = ''
-              $pw += $upper[(Get-Random -Minimum 0 -Maximum $upper.Length)]
-              $pw += $lower[(Get-Random -Minimum 0 -Maximum $lower.Length)]
-              $pw += $numbers[(Get-Random -Minimum 0 -Maximum $numbers.Length)]
-
-              # tambahin karakter random sampai 8
-              for ($i = 1; $i -le 5; $i++) {
-                  $pw += $all[(Get-Random -Minimum 0 -Maximum $all.Length)]
-              }
-
-              # acak posisi karakter
-              return -join ($pw.ToCharArray() | Sort-Object { Get-Random })
-          }
-
           # Kalau ada password custom dari env, pakai itu
           if ($env:CUSTOM_RDP_PASS) {
               $password = $env:CUSTOM_RDP_PASS
               Write-Host "│ ℹ️  Menggunakan password kustom dari environment variable" -ForegroundColor Blue
           } else {
-              $password = New-LabPassword
+              # Generate password yang gampang diketik: P@ssw0rd. + 3 angka random
+              $randomNumber = Get-Random -Minimum 100 -Maximum 1000
+              $password = "P@ssw0rd.$randomNumber"
           }
 
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
@@ -148,16 +127,6 @@ jobs:
               Write-Host "│ ✅ Hak Administrator & Remote Desktop telah diberikan" -ForegroundColor Green
               
           } catch {
-              Write-Host "│ ❌ Gagal membuat user: $($_.Exception.Message)" -ForegroundColor Red
-              exit 1
-          }
-          
-          # Simpan info ke environment (hindari mengekspos langsung di repo publik)
-          echo "RDP_USER=RDP-USER" >> $env:GITHUB_ENV
-          echo "RDP_PASS=$password" >> $env:GITHUB_ENV
-          echo "$password" > $env:TEMP\rdp_password.txt
-          
-          Write-Host "✅ Akun RDP (RDP-USER) sudah siap digunakan" -ForegroundColor Green
 
       # CEK HAK AKSES
       - name: 🔍 CEK HAK AKSES SISTEM
