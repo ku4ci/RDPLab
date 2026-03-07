@@ -1,0 +1,101 @@
+name: 🐧 Ubuntu RDP Lab
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: '🕐 Durasi penggunaan'
+        required: false
+        default: '3h'
+        type: choice
+        options:
+        - '1h'
+        - '3h' 
+        - '5h'
+
+jobs:
+  Ubuntu-RDP-Setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    
+    steps:
+      - name: 🎯 Inisialisasi Sistem
+        run: |
+          echo "Memulai setup Ubuntu RDP di GitHub Actions..."
+          
+      - name: 🔧 Install Desktop Environment & XRDP
+        run: |
+          echo "Update repository dan install XFCE4 beserta XRDP..."
+          sudo apt-get update -y
+          # Install XFCE4 (ringan dan cepat) dan XRDP tanpa interaksi prompt
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y xfce4 xfce4-goodies xrdp
+          
+          # Konfigurasi XRDP agar menggunakan XFCE saat login
+          sudo systemctl enable xrdp
+          echo xfce4-session > ~/.xsession
+          sudo cp ~/.xsession /etc/skel/
+          sudo adduser xrdp ssl-cert
+          sudo systemctl restart xrdp
+
+      - name: 👤 Membuat Akun RDP
+        run: |
+          echo "Membuat user baru untuk login..."
+          # Generate password acak 10 karakter
+          PASSWORD=$(openssl rand -base64 8)
+          
+          # Buat user 'rdpuser' dengan hak akses sudo
+          sudo useradd -m -s /bin/bash -G sudo rdpuser
+          echo "rdpuser:$PASSWORD" | sudo chpasswd
+          
+          # Set XFCE sebagai default desktop untuk user ini
+          sudo su - rdpuser -c "echo xfce4-session > ~/.xsession"
+          
+          # Simpan password ke environment variable untuk ditampilkan nanti
+          echo "RDP_PASS=$PASSWORD" >> $GITHUB_ENV
+
+      - name: 🌐 Konfigurasi Jaringan (Tailscale)
+        env:
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: |
+          echo "Menginstal dan menghubungkan ke Tailscale..."
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=ubuntu-rdp-lab --accept-routes --accept-dns
+          
+          # Ambil IP Tailscale
+          TAILSCALE_IP=$(tailscale ip -4)
+          echo "TAILSCALE_IP=$TAILSCALE_IP" >> $GITHUB_ENV
+
+      - name: 🎉 Informasi Koneksi
+        run: |
+          echo "===================================================="
+          echo "🎉 UBUNTU RDP LAB SIAP DIPAKAI! 🎉"
+          echo "===================================================="
+          echo "🌐 Alamat IP : $TAILSCALE_IP"
+          echo "👤 Username  : rdpuser"
+          echo "🔐 Password  : $RDP_PASS"
+          echo "===================================================="
+          echo "💡 Panduan:"
+          echo "1. Buka aplikasi Remote Desktop Connection di Windows/Mac."
+          echo "2. Masukkan Alamat IP di atas."
+          echo "3. Saat muncul layar login XRDP, biarkan session di 'Xorg'."
+          echo "4. Masukkan username dan password."
+          echo "===================================================="
+
+      - name: ⏳ Menjaga Sesi Tetap Aktif
+        run: |
+          # Ambil angka dari input durasi (misal '3h' jadi '3')
+          HOURS=$(echo "${{ github.event.inputs.duration }}" | tr -d 'h')
+          SECONDS=$(( HOURS * 3600 ))
+          
+          echo "⏳ Sistem akan tetap hidup selama $HOURS jam..."
+          
+          # Hitung mundur agar workflow tidak langsung selesai
+          while [ $SECONDS -gt 0 ]; do
+            sleep 60
+            SECONDS=$(( SECONDS - 60 ))
+            # Tampilkan log setiap 10 menit (600 detik) untuk menghindari timeout dari GitHub
+            if [ $(( SECONDS % 600 )) -eq 0 ]; then
+              echo "Sisa waktu lab: $(( SECONDS / 60 )) menit."
+            fi
+          done
+          
+          echo "Waktu habis! Sesi dihentikan."
